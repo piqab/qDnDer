@@ -22,3 +22,7 @@ __pycache__/
 
 # Agent harness
 .pi/
+
+# Agent instructions live outside the repo: ~/.pi/agent/AGENTS.md (personal)
+# and .pi/APPEND_SYSTEM.md (project, .pi is ignored above)
+AGENTS.md
