@@ -13,6 +13,9 @@ services:
     environment:
       QDNDER_ADDR: 0.0.0.0:8090
       QDNDER_DATA: /data
+      # Optional: fix the runner token so one .env serves server and runner
+      # (the nkt compose pipeline generates it). Empty — server generates one.
+      QDNDER_RUNNER_TOKEN: ${QDNDER_RUNNER_TOKEN:-}
       # Uncomment for PostgreSQL (profile postgres):
       # QDNDER_DB: postgres://qdnder:qdnder@postgres:5432/qdnder?sslmode=disable
     volumes:
