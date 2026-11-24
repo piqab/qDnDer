@@ -189,6 +189,9 @@ func TestLoginSession(t *testing.T) {
 	if cookie == nil {
 		t.Fatal("session cookie missing")
 	}
+	if !cookie.Secure || !cookie.HttpOnly {
+		t.Fatal("session cookie must be Secure and HttpOnly")
+	}
 	req, _ := http.NewRequest("GET", ts.URL+"/api/me", nil)
 	req.AddCookie(cookie)
 	r2, err := http.DefaultClient.Do(req)

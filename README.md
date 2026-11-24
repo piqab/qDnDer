@@ -40,6 +40,10 @@ docker compose logs server   # initial admin password
 Open http://localhost:8090 — log in, create a project (repo URL, image name,
 registry credentials), press **Build**. Runners pick jobs up automatically.
 
+> Session cookies are `Secure`: browsers accept them on `localhost` /
+> `127.0.0.1` over plain HTTP, but remote access requires HTTPS (put a TLS
+> reverse proxy in front — see [deploy/README.md](deploy/README.md)).
+
 ## Quick start (binary)
 
 ```bash
