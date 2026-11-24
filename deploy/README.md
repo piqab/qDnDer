@@ -73,9 +73,33 @@ Two ready pipelines in [`nkt/`](nkt/) — hub → Deployments → New pipeline:
   ghcr.io (published by the release workflow). Before the first deploy set
   the runner token in the `qdnder-runner` Secret (see the comment in the
   pipeline file).
+- **Host script** — paste `nkt/deploy-host.nkt` into Profiles → Scripts (or
+  use the `nkt/pipeline-host.yaml` pipeline, `action: script`). Deploys from
+  the published ghcr.io images — no source build: asks for the host address,
+  image version and a runner token (`openssl rand -hex 24`), installs Docker,
+  brings up the stack and waits for `/api/health`.
 
-A host-script variant (`deploy.nkt`) is planned once release binaries are
-available; for now use the compose pipeline on a Docker host.
+### Verify it works
+
+The UI binds to `127.0.0.1:8090` on the host — tunnel it:
+
+```bash
+ssh -L 8090:127.0.0.1:8090 root@<host-address>
+```
+
+1. Admin password is in the server log on first start:
+   `docker ps` → `docker logs <server-container> | grep "initial admin"`.
+2. Open http://127.0.0.1:8090 and log in (`admin` / the password from the log).
+3. Admin → Runners: `ci1` must be **online** — the runner reached the server
+   and BuildKit is up. Admin → Settings shows the runner token and queue.
+4. Test build (needs a registry to push to): create a project (repo URL with
+   a Dockerfile, image `your-registry/app`, registry credentials) → Build →
+   open the build for live logs. No registry handy? Run
+   `docker run -d -p 5000:5000 registry:2` on the host and use
+   `localhost:5000/app`.
+
+`/api/health` returns `{"ok":true,"version":"0.1.0"}` and the runner is
+online → server + BuildKit + runner work end to end.
 
 ## Webhooks
 

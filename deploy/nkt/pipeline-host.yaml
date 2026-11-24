@@ -1,0 +1,8 @@
+# qdnder on a Docker host via an nkt hub script (published ghcr.io images).
+# Deployments -> New pipeline -> paste this; edit the host name/address in
+# deploy-host.nkt for your host. The script asks for the address, image
+# version and a runner token at run time.
+repo: https://github.com/piqab/qDnDer.git
+ref: main
+action: script
+script: deploy/nkt/deploy-host.nkt

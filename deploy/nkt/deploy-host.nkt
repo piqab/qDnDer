@@ -1,0 +1,54 @@
+# qdnder on a Docker host via an nkt hub script — from the published ghcr.io
+# images (v* release), no source build. Profiles -> Scripts -> New script ->
+# paste -> Check -> Dry run -> Run. The runner token is a parameter
+# (generate one: openssl rand -hex 24); it goes to both server and runner.
+param ADDR "address of the qdnder host" host
+param VERSION "qdnder image version, e.g. 0.1.0"
+param TOKEN "runner token: openssl rand -hex 24" secret
+
+group ci
+host ci1 ${ADDR} user root password ask group ci
+install ci1
+wait ci1 online 5m
+on ci1 packages install docker
+on ci1 service docker enable
+
+on ci1 docker stack /srv/qdnder/docker-compose.yml up
+services:
+  server:
+    image: ghcr.io/piqab/qdnder:${VERSION}
+    restart: unless-stopped
+    environment:
+      QDNDER_ADDR: 0.0.0.0:8090
+      QDNDER_DATA: /data
+      QDNDER_RUNNER_TOKEN: ${TOKEN}
+    volumes:
+      - server-data:/data
+    ports:
+      - "127.0.0.1:8090:8090"
+  buildkitd:
+    image: moby/buildkit:v0.21.0-rootless
+    restart: unless-stopped
+    command: ["--addr", "tcp://0.0.0.0:1234", "--oci-worker-no-process-sandbox"]
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+    volumes:
+      - buildkit-data:/home/user/.local/share/buildkit
+  runner:
+    image: ghcr.io/piqab/qdnder-runner:${VERSION}
+    restart: unless-stopped
+    environment:
+      QDNDER_SERVER: http://server:8090
+      QDNDER_RUNNER_TOKEN: ${TOKEN}
+      QDNDER_RUNNER_NAME: ci1
+      BUILDKIT_HOST: tcp://buildkitd:1234
+    depends_on:
+      - server
+      - buildkitd
+volumes:
+  server-data:
+  buildkit-data:
+end
+
+wait ci1 http http://127.0.0.1:8090/api/health 200 60s
