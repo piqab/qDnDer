@@ -17,6 +17,7 @@ import (
 	"github.com/piqab/qdnder/internal/auth"
 	"github.com/piqab/qdnder/internal/runner"
 	"github.com/piqab/qdnder/internal/store"
+	"github.com/piqab/qdnder/internal/ui"
 )
 
 // version is overridden at build time via -ldflags.
@@ -107,7 +108,7 @@ func runServer() {
 		}
 	}
 
-	srv := &api.Server{Store: st, Sessions: auth.NewSessions(), RunnerToken: runnerToken, Version: version}
+	srv := &api.Server{Store: st, Sessions: auth.NewSessions(), RunnerToken: runnerToken, Version: version, UI: ui.Handler()}
 	httpSrv := &http.Server{
 		Addr:              addr,
 		Handler:           srv.Handler(),

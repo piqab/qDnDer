@@ -25,6 +25,7 @@ type Server struct {
 	Sessions    *auth.Sessions
 	RunnerToken string
 	Version     string
+	UI          http.Handler // optional embedded web UI, served at /
 }
 
 type ctxKey int
@@ -117,6 +118,10 @@ func (s *Server) Handler() http.Handler {
 		Version: s.Version,
 	}
 	mux.Handle("POST /mcp", mcpSrv.Handler())
+
+	if s.UI != nil {
+		mux.Handle("GET /", s.UI)
+	}
 
 	return mux
 }
