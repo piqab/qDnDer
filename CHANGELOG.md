@@ -8,6 +8,17 @@ follow semver.
 
 ## [Unreleased]
 
+### Added
+- `QDNDER_RUNNER_TOKEN` environment override for the server: one compose
+  `.env` can serve both server and runner (used by the nkt pipeline).
+- Release workflow (`.github/workflows/release.yml`): `v*` tags build
+  binaries (linux/darwin amd64+arm64, windows amd64) with SHA-256 checksums
+  and publish multi-arch ghcr.io images (`qdnder`, `qdnder-runner`).
+- nkt deployment pipelines: `deploy/nkt/pipeline-compose.yaml` (one compose
+  stack, hub-generated runner token, `nkt-example.json` for the hub
+  "Examples" menu) and `deploy/nkt/pipeline-k8s.yaml` (manifests into a
+  cluster).
+
 ### Fixed
 - Session cookies now set `Secure` and `HttpOnly` on both login and logout
   (CodeQL alerts #1–#3). Remote UI access requires HTTPS; localhost stays

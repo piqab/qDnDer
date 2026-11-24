@@ -48,6 +48,10 @@ docker compose logs server   # пароль администратора при 
 
 ## Быстрый старт (бинарник)
 
+Скачайте готовый бинарник из [GitHub Releases](https://github.com/piqab/qDnDer/releases)
+(linux/darwin amd64/arm64, windows amd64; контрольные суммы SHA-256 в комплекте)
+или соберите:
+
 ```bash
 make build
 QDNDER_ADDR=127.0.0.1:8090 ./qdnder server &   # пароль админа при первом запуске
@@ -86,6 +90,10 @@ steps:
 - **Kubernetes**: [`deploy/k8s/`](deploy/k8s/) — Deployment сервера + PVC
   (SQLite) или DSN PostgreSQL, rootless BuildKit StatefulSet, Deployment
   раннера.
+- **Через хаб nkt**: [`deploy/nkt/pipeline-compose.yaml`](deploy/nkt/pipeline-compose.yaml)
+  — один compose-стек (токен раннера генерирует хаб);
+  [`deploy/nkt/pipeline-k8s.yaml`](deploy/nkt/pipeline-k8s.yaml) — манифесты
+  в кластер. Шаги — в [deploy/README.md](deploy/README.md).
 - **Плагин хаба nkt**: [`plugin/qdnder/`](plugin/qdnder/) — соберите
   `make plugin-archive`, затем хаб → «О системе» → «Плагины» → «Каталог» →
   **«Загрузить свой плагин»** (`qdnder-plugin.tar.gz` или `.zip`).

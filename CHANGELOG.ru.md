@@ -7,6 +7,16 @@
 
 ## [Не выпущено]
 
+### Добавлено
+- Переопределение токена раннера через окружение `QDNDER_RUNNER_TOKEN`:
+  один `.env` compose обслуживает и сервер, и раннер (использует конвейер nkt).
+- Release-workflow (`.github/workflows/release.yml`): по тегам `v*` собирает
+  бинарники (linux/darwin amd64+arm64, windows amd64) с суммами SHA-256 и
+  публикует мультиархитектурные образы ghcr.io (`qdnder`, `qdnder-runner`).
+- Конвейеры выкладки через nkt: `deploy/nkt/pipeline-compose.yaml` (один
+  compose-стек, токен раннера генерирует хаб, `nkt-example.json` для меню
+  «Примеры» хаба) и `deploy/nkt/pipeline-k8s.yaml` (манифесты в кластер).
+
 ### Исправлено
 - Cookie сессии теперь с `Secure` и `HttpOnly` и при входе, и при выходе
   (алерты CodeQL #1–#3). Удалённый доступ к UI требует HTTPS; localhost
