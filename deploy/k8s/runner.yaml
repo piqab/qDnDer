@@ -1,0 +1,89 @@
+# Rootless BuildKit StatefulSet + runner Deployment.
+# The runner token comes from the qdnder-runner secret (admin panel → Settings).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: qdnder-runner
+  namespace: qdnder
+type: Opaque
+stringData:
+  token: "REPLACE_WITH_RUNNER_TOKEN"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: buildkitd
+  namespace: qdnder
+spec:
+  serviceName: buildkitd
+  replicas: 1
+  selector:
+    matchLabels: {app: buildkitd}
+  template:
+    metadata:
+      labels: {app: buildkitd}
+    spec:
+      containers:
+        - name: buildkitd
+          image: moby/buildkit:v0.21.0-rootless
+          args: ["--addr", "tcp://0.0.0.0:1234", "--oci-worker-no-process-sandbox"]
+          securityContext:
+            seccompProfile: {type: Unconfined}
+            runAsUser: 1000
+            runAsGroup: 1000
+          ports:
+            - containerPort: 1234
+          volumeMounts:
+            - name: buildkit-data
+              mountPath: /home/user/.local/share/buildkit
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 2Gi}
+  volumeClaimTemplates:
+    - metadata:
+        name: buildkit-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: buildkitd
+  namespace: qdnder
+spec:
+  selector: {app: buildkitd}
+  ports:
+    - port: 1234
+      targetPort: 1234
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qdnder-runner
+  namespace: qdnder
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: qdnder-runner}
+  template:
+    metadata:
+      labels: {app: qdnder-runner}
+    spec:
+      containers:
+        - name: runner
+          image: ghcr.io/piqab/qdnder-runner:0.1.0
+          args: ["runner"]
+          env:
+            - name: QDNDER_SERVER
+              value: http://qdnder-server:8090
+            - name: QDNDER_RUNNER_TOKEN
+              valueFrom:
+                secretKeyRef: {name: qdnder-runner, key: token}
+            - name: BUILDKIT_HOST
+              value: tcp://buildkitd:1234
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 256Mi}

@@ -1,0 +1,70 @@
+# qdnder server: Deployment + PVC (SQLite) + Service.
+# For PostgreSQL set QDNDER_DB to a DSN and remove the PVC/volume.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: qdnder
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qdnder-data
+  namespace: qdnder
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qdnder-server
+  namespace: qdnder
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: qdnder-server}
+  template:
+    metadata:
+      labels: {app: qdnder-server}
+    spec:
+      containers:
+        - name: server
+          image: ghcr.io/piqab/qdnder:0.1.0
+          args: ["server"]
+          env:
+            - name: QDNDER_ADDR
+              value: "0.0.0.0:8090"
+            - name: QDNDER_DATA
+              value: /data
+            # PostgreSQL instead of SQLite:
+            # - name: QDNDER_DB
+            #   valueFrom:
+            #     secretKeyRef: {name: qdnder-db, key: dsn}
+          ports:
+            - containerPort: 8090
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet: {path: /api/health, port: 8090}
+            initialDelaySeconds: 2
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 256Mi}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: qdnder-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qdnder-server
+  namespace: qdnder
+spec:
+  selector: {app: qdnder-server}
+  ports:
+    - port: 8090
+      targetPort: 8090

@@ -1,0 +1,60 @@
+# qdnder: server + rootless BuildKit + runner.
+# Optional PostgreSQL: docker compose --profile postgres up -d
+# First admin password: docker compose logs server
+name: qdnder
+
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "127.0.0.1:8090:8090"
+    environment:
+      QDNDER_ADDR: 0.0.0.0:8090
+      QDNDER_DATA: /data
+      # Uncomment for PostgreSQL (profile postgres):
+      # QDNDER_DB: postgres://qdnder:qdnder@postgres:5432/qdnder?sslmode=disable
+    volumes:
+      - server-data:/data
+    restart: unless-stopped
+
+  buildkitd:
+    image: moby/buildkit:v0.21.0-rootless
+    command: ["--addr", "tcp://0.0.0.0:1234", "--oci-worker-no-process-sandbox"]
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+    volumes:
+      - buildkit-data:/home/user/.local/share/buildkit
+    restart: unless-stopped
+
+  runner:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.runner
+    environment:
+      QDNDER_SERVER: http://server:8090
+      QDNDER_RUNNER_TOKEN: ${QDNDER_RUNNER_TOKEN:?set QDNDER_RUNNER_TOKEN from admin panel -> Settings}
+      QDNDER_RUNNER_NAME: runner-compose
+      BUILDKIT_HOST: tcp://buildkitd:1234
+    depends_on:
+      - server
+      - buildkitd
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    profiles: ["postgres"]
+    environment:
+      POSTGRES_USER: qdnder
+      POSTGRES_PASSWORD: qdnder
+      POSTGRES_DB: qdnder
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  server-data:
+  buildkit-data:
+  pg-data:
