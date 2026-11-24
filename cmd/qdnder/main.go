@@ -97,16 +97,7 @@ func runServer() {
 		}
 		fmt.Printf("initial admin login: admin / %s  (change it after login)\n", pass)
 	}
-	runnerToken, err := st.Setting("runner_token")
-	if err != nil {
-		log.Fatal(err)
-	}
-	if runnerToken == "" {
-		runnerToken = "qdnr_" + auth.RandomSecret(24)
-		if err := st.SetSetting("runner_token", runnerToken); err != nil {
-			log.Fatal(err)
-		}
-	}
+	runnerToken := resolveRunnerToken(st)
 
 	srv := &api.Server{Store: st, Sessions: auth.NewSessions(), RunnerToken: runnerToken, Version: version, UI: ui.Handler()}
 	httpSrv := &http.Server{
@@ -120,4 +111,29 @@ func runServer() {
 
 func isPostgres(dsn string) bool {
 	return len(dsn) > 11 && (dsn[:11] == "postgres://" || (len(dsn) > 13 && dsn[:13] == "postgresql://"))
+}
+
+// resolveRunnerToken returns the shared runner token. QDNDER_RUNNER_TOKEN
+// from the environment wins, so one compose .env can serve both server and
+// runner (the nkt pipeline generates it). The value is persisted so the
+// admin panel shows it. Without the env var the stored token is reused or
+// generated once.
+func resolveRunnerToken(st *store.Store) string {
+	if tok := os.Getenv("QDNDER_RUNNER_TOKEN"); tok != "" {
+		if err := st.SetSetting("runner_token", tok); err != nil {
+			log.Fatal(err)
+		}
+		return tok
+	}
+	tok, err := st.Setting("runner_token")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if tok == "" {
+		tok = "qdnr_" + auth.RandomSecret(24)
+		if err := st.SetSetting("runner_token", tok); err != nil {
+			log.Fatal(err)
+		}
+	}
+	return tok
 }
