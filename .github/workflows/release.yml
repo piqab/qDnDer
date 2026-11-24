@@ -1,0 +1,108 @@
+# Release: v* tags build binaries for Linux/macOS/Windows and publish
+# multi-arch images to ghcr.io (qdnder server + qdnder-runner).
+# Uses the built-in GITHUB_TOKEN — no extra secrets needed.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  binaries:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+            ext: .exe
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+      - name: Build
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          OUT="qdnder-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
+          CGO_ENABLED=0 GOOS="${{ matrix.goos }}" GOARCH="${{ matrix.goarch }}" \
+            go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o "$OUT" ./cmd/qdnder
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qdnder-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: qdnder-*
+
+  release:
+    needs: binaries
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum qdnder-* > checksums.txt
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/qdnder-* dist/checksums.txt \
+            --title "qdnder $GITHUB_REF_NAME" --generate-notes
+
+  images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Image metadata
+        id: meta
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          OWNER="$(echo "$GITHUB_REPOSITORY_OWNER" | tr 'A-Z' 'a-z')"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "owner=$OWNER" >> "$GITHUB_OUTPUT"
+      - name: Server image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: VERSION=${{ steps.meta.outputs.version }}
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.owner }}/qdnder:${{ github.ref_name }}
+            ghcr.io/${{ steps.meta.outputs.owner }}/qdnder:${{ steps.meta.outputs.version }}
+            ghcr.io/${{ steps.meta.outputs.owner }}/qdnder:latest
+      - name: Runner image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.runner
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: VERSION=${{ steps.meta.outputs.version }}
+          tags: |
+            ghcr.io/${{ steps.meta.outputs.owner }}/qdnder-runner:${{ github.ref_name }}
+            ghcr.io/${{ steps.meta.outputs.owner }}/qdnder-runner:${{ steps.meta.outputs.version }}
+            ghcr.io/${{ steps.meta.outputs.owner }}/qdnder-runner:latest
