@@ -1,0 +1,1 @@
+{"key": "qdnder", "link": "https://github.com/piqab/qDnDer/blob/main/deploy/docker-compose.yml", "project": "qdnder", "readme": "https://github.com/piqab/qDnDer/tree/main/deploy", "files": [], "envKeys": {"server": ["QDNDER_RUNNER_TOKEN"], "runner": ["QDNDER_RUNNER_TOKEN"]}, "env": [["QDNDER_RUNNER_TOKEN", "generate:hex32"]], "order": 70}

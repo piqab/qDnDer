@@ -46,6 +46,9 @@ registry credentials), press **Build**. Runners pick jobs up automatically.
 
 ## Quick start (binary)
 
+Download a prebuilt binary from [GitHub Releases](https://github.com/piqab/qDnDer/releases)
+(linux/darwin amd64/arm64, windows amd64; SHA-256 checksums included), or build:
+
 ```bash
 make build
 QDNDER_ADDR=127.0.0.1:8090 ./qdnder server &   # prints admin password on first run
@@ -83,6 +86,10 @@ Without the file the project settings are used as-is.
   — server + rootless buildkitd + runner; optional PostgreSQL profile.
 - **Kubernetes**: [`deploy/k8s/`](deploy/k8s/) — server Deployment + PVC
   (SQLite) or PostgreSQL DSN, rootless BuildKit StatefulSet, runner Deployment.
+- **Via nkt hub**: [`deploy/nkt/pipeline-compose.yaml`](deploy/nkt/pipeline-compose.yaml)
+  — one compose stack (the hub generates the runner token);
+  [`deploy/nkt/pipeline-k8s.yaml`](deploy/nkt/pipeline-k8s.yaml) — manifests
+  into a cluster. Steps in [deploy/README.md](deploy/README.md).
 - **nkt hub plugin**: [`plugin/qdnder/`](plugin/qdnder/) — build
   `make plugin-archive`, then hub → About → Plugins → Catalog →
   **Upload your own plugin** (`qdnder-plugin.tar.gz` or `.zip`).

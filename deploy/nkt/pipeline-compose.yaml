@@ -1,0 +1,17 @@
+# qdnder через хаб nkt: один compose-стек (server + rootless buildkitd + runner).
+# «Выкладки» → «Новый конвейер» → вставьте это; хост ci1 должен быть с Docker.
+# Токен раннера генерирует хаб (generate:hex32) и передаёт серверу и раннеру
+# через .env стека — копировать токен вручную не нужно.
+repo: https://github.com/piqab/qDnDer.git
+ref: main
+action: compose
+compose:
+  file: deploy/docker-compose.yml
+  project: qdnder
+  hosts: [ci1]
+  wait_timeout: 5m
+  env_keys:
+    server: [QDNDER_RUNNER_TOKEN]
+    runner: [QDNDER_RUNNER_TOKEN]
+  env:
+    QDNDER_RUNNER_TOKEN: generate:hex32

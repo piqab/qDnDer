@@ -1,0 +1,14 @@
+# qdnder в Kubernetes через хаб nkt: манифесты из deploy/k8s/.
+# Образы ghcr.io/piqab/qdnder* публикует release-workflow по тегам v*.
+# Перед первой выкладкой задайте токен раннера в Secret qdnder-runner
+# (deploy/k8s/runner.yaml): сервер печатает его при первом старте —
+# Админка → Настройки. Либо задайте серверу QDNDER_RUNNER_TOKEN и тот же
+# токен положите в Secret.
+repo: https://github.com/piqab/qDnDer.git
+ref: main
+tags: "v*"
+action: manifest
+manifests:
+  - deploy/k8s/server.yaml
+  - deploy/k8s/runner.yaml
+clusters: [prod]
