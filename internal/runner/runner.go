@@ -275,6 +275,22 @@ func (r *Runner) build(ctx context.Context, job *Job, sink *logSink) (string, []
 		return store.BuildCanceled, nil, fmt.Errorf("canceled by user")
 	}
 
+	// Optional qdnder.yaml overrides project settings and adds steps.
+	spec, err := pipeline.Load(repoDir)
+	if err != nil {
+		return store.BuildFailed, nil, err
+	}
+	if spec != nil {
+		sink.write("pipeline: " + pipeline.FileName + " loaded")
+		applySpec(&p, spec)
+		if err := r.runSteps(ctx, spec, "before", repoDir, sink); err != nil {
+			if sink.isCanceled() {
+				return store.BuildCanceled, nil, fmt.Errorf("canceled by user")
+			}
+			return store.BuildFailed, nil, err
+		}
+	}
+
 	// Resolve the commit sha for tag templates.
 	sha := b.SHA
 	if sha == "" {
@@ -326,8 +342,60 @@ func (r *Runner) build(ctx context.Context, job *Job, sink *logSink) (string, []
 	if sink.isCanceled() {
 		return store.BuildCanceled, nil, fmt.Errorf("canceled by user")
 	}
+	if err := r.runSteps(ctx, spec, "after", repoDir, sink); err != nil {
+		if sink.isCanceled() {
+			return store.BuildCanceled, nil, fmt.Errorf("canceled by user")
+		}
+		return store.BuildFailed, nil, err
+	}
 	sink.write("pushed: " + strings.Join(full, ", "))
 	return store.BuildSuccess, full, nil
+}
+
+// applySpec overrides project settings with non-empty qdnder.yaml fields.
+func applySpec(p *ProjectSettings, s *pipeline.Spec) {
+	if s.Dockerfile != "" {
+		p.Dockerfile = s.Dockerfile
+	}
+	if s.Context != "" {
+		p.Context = s.Context
+	}
+	if s.Image != "" {
+		p.Image = s.Image
+	}
+	if len(s.Tags) > 0 {
+		p.Tags = s.Tags
+	}
+	if len(s.BuildArgs) > 0 {
+		p.BuildArgs = s.BuildArgs
+	}
+}
+
+// runSteps executes pipeline steps of the given phase in the repository
+// directory, streaming their output into the build log.
+func (r *Runner) runSteps(ctx context.Context, spec *pipeline.Spec, when, dir string, sink *logSink) error {
+	if spec == nil {
+		return nil
+	}
+	for _, st := range spec.Steps {
+		if st.When != when {
+			continue
+		}
+		if sink.isCanceled() {
+			return fmt.Errorf("canceled by user")
+		}
+		sink.write("=== step: " + st.Name + " ===")
+		cmd := exec.CommandContext(ctx, "sh", "-c", st.Run)
+		cmd.Dir = dir
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		if err := streamCommand(cmd, sink); err != nil {
+			if sink.isCanceled() {
+				return fmt.Errorf("canceled by user")
+			}
+			return fmt.Errorf("step %s: %w", st.Name, err)
+		}
+	}
+	return nil
 }
 
 // gitClone clones the ref (and the exact sha when the webhook provided one).

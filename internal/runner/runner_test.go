@@ -45,8 +45,13 @@ exit 0
 // setup creates a server with one queued build and fake git/buildctl on PATH.
 func setup(t *testing.T, mode string) (*store.Store, *Runner, context.CancelFunc) {
 	t.Helper()
+	return setupGit(t, mode, fakeGit)
+}
+
+func setupGit(t *testing.T, mode, gitScript string) (*store.Store, *Runner, context.CancelFunc) {
+	t.Helper()
 	bin := t.TempDir()
-	for name, script := range map[string]string{"git": fakeGit, "buildctl": fakeBuildctl} {
+	for name, script := range map[string]string{"git": gitScript, "buildctl": fakeBuildctl} {
 		p := filepath.Join(bin, name)
 		if err := os.WriteFile(p, []byte(script), 0o755); err != nil {
 			t.Fatal(err)
@@ -153,6 +158,49 @@ func TestRunnerCancel(t *testing.T) {
 	b := waitBuild(t, st, id, 10*time.Second)
 	if b.Status != store.BuildCanceled {
 		t.Fatalf("status=%s error=%s", b.Status, b.Error)
+	}
+}
+
+func TestRunnerPipeline(t *testing.T) {
+	// Fake git also writes a qdnder.yaml overriding image/tags and adding steps.
+	gitScript := `#!/bin/sh
+case "$1" in
+  clone)
+    for last; do :; done
+    mkdir -p "$last"
+    printf 'FROM scratch\n' > "$last/Dockerfile"
+    cat > "$last/qdnder.yaml" <<'EOF'
+image: reg2.example.com/override
+tags: ["v-test"]
+steps:
+  - name: pre
+    run: echo hello-step
+  - name: post
+    run: echo after-step
+    when: after
+EOF
+    echo "Cloning into '$last'..."
+    ;;
+  -C)
+    case "$3" in
+      rev-parse) echo "0123456789abcdef0123456789abcdef01234567" ;;
+      *) echo "git $3 done" ;;
+    esac
+    ;;
+esac
+exit 0
+`
+	st, _, _ := setupGit(t, "ok", gitScript)
+	builds, _ := st.Builds("", "", 10)
+	b := waitBuild(t, st, builds[0].ID, 15*time.Second)
+	if b.Status != store.BuildSuccess {
+		t.Fatalf("status=%s error=%s log:\n%s", b.Status, b.Error, b.Log)
+	}
+	if len(b.ImageTags) != 1 || b.ImageTags[0] != "reg2.example.com/override:v-test" {
+		t.Fatalf("pipeline image/tags not applied: %v", b.ImageTags)
+	}
+	if !strings.Contains(b.Log, "hello-step") || !strings.Contains(b.Log, "after-step") {
+		t.Fatalf("steps output missing:\n%s", b.Log)
 	}
 }
 

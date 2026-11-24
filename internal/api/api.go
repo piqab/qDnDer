@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"github.com/piqab/qdnder/internal/auth"
+	"github.com/piqab/qdnder/internal/mcp"
 	"github.com/piqab/qdnder/internal/store"
+	"github.com/piqab/qdnder/internal/webhook"
 )
 
 // Server holds API dependencies.
@@ -100,7 +102,56 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/runner/finish", authed("runner", s.runnerFinish))
 	mux.HandleFunc("POST /api/runner/heartbeat", authed("runner", s.runnerHeartbeat))
 
+	// Webhooks are authenticated by the per-project secret, not by tokens.
+	mux.HandleFunc("POST /api/webhook/{project}", s.webhook)
+
+	mcpSrv := &mcp.Server{
+		Store:   s.Store,
+		Enqueue: s.EnqueueBuild,
+		Resolve: func(r *http.Request) string {
+			if p := s.resolve(r); p != nil {
+				return p.Role
+			}
+			return ""
+		},
+		Version: s.Version,
+	}
+	mux.Handle("POST /mcp", mcpSrv.Handler())
+
 	return mux
+}
+
+// webhook verifies the provider signature and queues a build on push.
+func (s *Server) webhook(w http.ResponseWriter, r *http.Request) {
+	ref := r.PathValue("project")
+	p, err := s.Store.ProjectByName(ref)
+	if err != nil || p == nil {
+		p, err = s.Store.ProjectByID(ref)
+	}
+	if err != nil || p == nil {
+		fail(w, 404, "project not found")
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 5<<20))
+	if err != nil {
+		fail(w, 400, "bad body")
+		return
+	}
+	ev, err := webhook.Parse(r.Header, body, p.WebhookSecret)
+	if err != nil {
+		fail(w, 403, err.Error())
+		return
+	}
+	if ev == nil {
+		writeJSON(w, 200, map[string]string{"ok": "ignored"})
+		return
+	}
+	b, err := s.EnqueueBuild(p.Name, ev.Ref, ev.SHA, ev.Tag, "webhook")
+	if err != nil {
+		fail(w, 500, err.Error())
+		return
+	}
+	writeJSON(w, 201, b)
 }
 
 // withAuth resolves the principal (Bearer token or session cookie) and
