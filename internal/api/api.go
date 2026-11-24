@@ -225,7 +225,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	id := s.Sessions.Create(u.ID, u.Username, u.Role, 7*24*time.Hour)
 	http.SetCookie(w, &http.Cookie{
 		Name: "qdnder_session", Value: id, Path: "/",
-		HttpOnly: true, SameSite: http.SameSiteStrictMode, MaxAge: 7 * 24 * 3600,
+		HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode, MaxAge: 7 * 24 * 3600,
 	})
 	writeJSON(w, 200, map[string]string{"username": u.Username, "role": u.Role})
 }
@@ -234,7 +234,12 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie("qdnder_session"); err == nil {
 		s.Sessions.Delete(c.Value)
 	}
-	http.SetCookie(w, &http.Cookie{Name: "qdnder_session", Value: "", Path: "/", MaxAge: -1})
+	// Clearing cookie must carry the same attributes as the session cookie,
+	// otherwise the browser may keep the original one.
+	http.SetCookie(w, &http.Cookie{
+		Name: "qdnder_session", Value: "", Path: "/",
+		HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode, MaxAge: -1,
+	})
 	writeJSON(w, 200, map[string]bool{"ok": true})
 }
 

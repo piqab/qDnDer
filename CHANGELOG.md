@@ -6,6 +6,13 @@ All notable changes to qdnder are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versions
 follow semver.
 
+## [Unreleased]
+
+### Fixed
+- Session cookies now set `Secure` and `HttpOnly` on both login and logout
+  (CodeQL alerts #1–#3). Remote UI access requires HTTPS; localhost stays
+  usable over plain HTTP.
+
 ## [0.1.0] - 2026-11-24
 
 ### Added
