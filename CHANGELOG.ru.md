@@ -21,6 +21,9 @@
 - Cookie сессии теперь с `Secure` и `HttpOnly` и при входе, и при выходе
   (алерты CodeQL #1–#3). Удалённый доступ к UI требует HTTPS; localhost
   по-прежнему работает по обычному HTTP.
+- Работа с процессами раннера стала кроссплатформенной (`proc_unix.go` /
+  `proc_windows.go`): сборка Windows-бинарника падала на Unix-only
+  `syscall.Kill` / `Setpgid`.
 
 ## [0.1.0] - 2026-11-24
 
