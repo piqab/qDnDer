@@ -1,0 +1,20 @@
+# Build artifacts
+/qdnder
+/dist/
+*.tar.gz
+*.zip
+
+# Runtime data
+/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.env
+
+# OS / editor
+.DS_Store
+*.swp
+
+# Agent harness
+.pi/
