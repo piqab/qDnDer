@@ -3,15 +3,19 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/piqab/qdnder/internal/api"
 	"github.com/piqab/qdnder/internal/auth"
+	"github.com/piqab/qdnder/internal/runner"
 	"github.com/piqab/qdnder/internal/store"
 )
 
@@ -33,11 +37,39 @@ func main() {
 	switch mode {
 	case "server":
 		runServer()
+	case "runner":
+		runRunner()
 	case "version", "--version", "-v":
 		fmt.Println("qdnder " + version)
 	default:
-		fmt.Fprintf(os.Stderr, "usage: qdnder server|version\n")
+		fmt.Fprintf(os.Stderr, "usage: qdnder server|runner|version\n")
 		os.Exit(2)
+	}
+}
+
+func runRunner() {
+	server := env("QDNDER_SERVER", "http://127.0.0.1:8090")
+	token := os.Getenv("QDNDER_RUNNER_TOKEN")
+	if token == "" {
+		log.Fatal("QDNDER_RUNNER_TOKEN is required (admin panel → Settings)")
+	}
+	name := env("QDNDER_RUNNER_NAME", "")
+	if name == "" {
+		host, _ := os.Hostname()
+		name = "runner-" + host
+	}
+	r := &runner.Runner{
+		Name:         name,
+		Version:      version,
+		Client:       runner.NewClient(server, token),
+		BuildkitHost: env("BUILDKIT_HOST", "tcp://127.0.0.1:1234"),
+		WorkDir:      env("QDNDER_WORKDIR", os.TempDir()),
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	fmt.Printf("qdnder runner %s: server=%s buildkit=%s name=%s\n", version, server, r.BuildkitHost, name)
+	if err := r.Run(ctx); err != nil && ctx.Err() == nil {
+		log.Fatal(err)
 	}
 }
 
