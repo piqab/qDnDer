@@ -1,19 +1,21 @@
 # qdnder on a Docker host via an nkt hub script — from the published ghcr.io
 # images (v* release), no source build. Profiles -> Scripts -> New script ->
-# paste -> Check -> Dry run -> Run. The runner token is a parameter
-# (generate one: openssl rand -hex 24); it goes to both server and runner.
+# paste -> Check -> Dry run -> Run. At run time the script asks for the host
+# name, address, image version and a runner token (openssl rand -hex 24);
+# the token goes to both server and runner. Nothing to edit in the text.
+param HOST "host name in the hub" host
 param ADDR "address of the qdnder host" host
 param VERSION "qdnder image version, e.g. 0.1.0"
 param TOKEN "runner token: openssl rand -hex 24" secret
 
 group ci
-host ci1 ${ADDR} user root password ask group ci
-install ci1
-wait ci1 online 5m
-on ci1 packages install docker
-on ci1 service docker enable
+host ${HOST} ${ADDR} user root password ask group ci
+install ${HOST}
+wait ${HOST} online 5m
+on ${HOST} packages install docker
+on ${HOST} service docker enable
 
-on ci1 docker stack /srv/qdnder/docker-compose.yml up
+on ${HOST} docker stack /srv/qdnder/docker-compose.yml up
 services:
   server:
     image: ghcr.io/piqab/qdnder:${VERSION}
@@ -41,7 +43,7 @@ services:
     environment:
       QDNDER_SERVER: http://server:8090
       QDNDER_RUNNER_TOKEN: ${TOKEN}
-      QDNDER_RUNNER_NAME: ci1
+      QDNDER_RUNNER_NAME: ${HOST}
       BUILDKIT_HOST: tcp://buildkitd:1234
     depends_on:
       - server
@@ -51,4 +53,4 @@ volumes:
   buildkit-data:
 end
 
-wait ci1 http http://127.0.0.1:8090/api/health 200 60s
+wait ${HOST} http http://127.0.0.1:8090/api/health 200 60s
