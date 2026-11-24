@@ -1,0 +1,21 @@
+{
+  "name": "qdnder",
+  "version": "0.1.0",
+  "min_nkt": "1.16.0",
+  "protocol": 1,
+  "title": {"ru": "qdnder CI", "en": "qdnder CI"},
+  "description": {
+    "ru": "Сборки Docker-образов в независимом CI qdnder: список сборок, живые логи, запуск и отмена, сводка с находками, команда сценария и инструменты MCP.",
+    "en": "Docker image builds in the independent qdnder CI: build list, logs, trigger and cancel, summary with findings, a script command and MCP tools."
+  },
+  "run": "python3",
+  "file": "nkt-plugin.py",
+  "port": 9290,
+  "settings": [
+    {"env": "QDNDER_URL", "title": {"ru": "Адрес qdnder", "en": "qdnder address"}, "default": "http://127.0.0.1:8090",
+     "hint": {"ru": "откуда плагин видит сервер qdnder", "en": "where the plugin reaches the qdnder server"}},
+    {"env": "QDNDER_TOKEN", "title": {"ru": "API-токен qdnder", "en": "qdnder API token"}, "secret": true, "required": true,
+     "hint": {"ru": "токен с ролью operator (админка qdnder → API-токены); хранится только в файле настроек службы (0600)",
+              "en": "a token with the operator role (qdnder admin → API tokens); kept only in the service settings file (0600)"}}
+  ]
+}

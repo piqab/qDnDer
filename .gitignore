@@ -16,5 +16,9 @@
 .DS_Store
 *.swp
 
+# Python
+__pycache__/
+*.pyc
+
 # Agent harness
 .pi/

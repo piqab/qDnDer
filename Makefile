@@ -15,8 +15,10 @@ plugin-test:
 
 plugin-archive:
 	mkdir -p dist
-	tar czf dist/qdnder-plugin.tar.gz -C plugin qdnder
-	cd plugin && zip -qr ../dist/qdnder-plugin.zip qdnder
+	find plugin -name __pycache__ -type d -exec rm -rf {} + 2>/dev/null || true
+	rm -f dist/qdnder-plugin.tar.gz dist/qdnder-plugin.zip
+	tar czf dist/qdnder-plugin.tar.gz --exclude '__pycache__' -C plugin qdnder
+	cd plugin && zip -qr ../dist/qdnder-plugin.zip qdnder -x '*__pycache__*'
 	@ls -lh dist/qdnder-plugin.*
 
 clean:
