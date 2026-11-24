@@ -19,7 +19,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/piqab/qdnder/internal/pipeline"
@@ -332,7 +331,7 @@ func (r *Runner) build(ctx context.Context, job *Job, sink *logSink) (string, []
 	sink.write("buildctl build → " + strings.Join(full, ", "))
 	cmd := exec.CommandContext(ctx, "buildctl", args...)
 	cmd.Env = append(os.Environ(), "DOCKER_CONFIG="+cfgDir)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setProcessGroup(cmd)
 	if err := streamCommand(cmd, sink); err != nil {
 		if sink.isCanceled() {
 			return store.BuildCanceled, nil, fmt.Errorf("canceled by user")
@@ -387,7 +386,7 @@ func (r *Runner) runSteps(ctx context.Context, spec *pipeline.Spec, when, dir st
 		sink.write("=== step: " + st.Name + " ===")
 		cmd := exec.CommandContext(ctx, "sh", "-c", st.Run)
 		cmd.Dir = dir
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		setProcessGroup(cmd)
 		if err := streamCommand(cmd, sink); err != nil {
 			if sink.isCanceled() {
 				return fmt.Errorf("canceled by user")
@@ -406,7 +405,7 @@ func (r *Runner) gitClone(ctx context.Context, p ProjectSettings, b store.Build,
 		ref = p.DefaultBranch
 	}
 	cmd := exec.CommandContext(ctx, "git", "clone", "--depth", "1", "--branch", ref, repoURL, dir)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setProcessGroup(cmd)
 	if err := streamCommand(cmd, sink); err != nil {
 		return err
 	}
@@ -460,8 +459,8 @@ func streamCommand(cmd *exec.Cmd, sink *logSink) error {
 				return
 			case <-t.C:
 				sink.flush()
-				if sink.isCanceled() && cmd.Process != nil {
-					_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+				if sink.isCanceled() {
+					killProcessGroup(cmd)
 				}
 			}
 		}
@@ -471,8 +470,8 @@ func streamCommand(cmd *exec.Cmd, sink *logSink) error {
 		sc.Buffer(make([]byte, 64*1024), 1024*1024)
 		for sc.Scan() {
 			sink.write(sc.Text())
-			if sink.isCanceled() && cmd.Process != nil {
-				_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			if sink.isCanceled() {
+				killProcessGroup(cmd)
 			}
 		}
 		pr.Close()
