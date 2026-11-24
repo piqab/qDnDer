@@ -93,7 +93,8 @@ steps:
 - **Через хаб nkt**: [`deploy/nkt/pipeline-compose.yaml`](deploy/nkt/pipeline-compose.yaml)
   — один compose-стек (токен раннера генерирует хаб);
   [`deploy/nkt/pipeline-k8s.yaml`](deploy/nkt/pipeline-k8s.yaml) — манифесты
-  в кластер. Шаги — в [deploy/README.md](deploy/README.md).
+  в кластер; [`deploy/nkt/deploy-host.nkt`](deploy/nkt/deploy-host.nkt) —
+  сценарий на хост из готовых образов. Шаги — в [deploy/README.md](deploy/README.md).
 - **Плагин хаба nkt**: [`plugin/qdnder/`](plugin/qdnder/) — соберите
   `make plugin-archive`, затем хаб → «О системе» → «Плагины» → «Каталог» →
   **«Загрузить свой плагин»** (`qdnder-plugin.tar.gz` или `.zip`).

@@ -18,6 +18,9 @@ follow semver.
   stack, hub-generated runner token, `nkt-example.json` for the hub
   "Examples" menu) and `deploy/nkt/pipeline-k8s.yaml` (manifests into a
   cluster).
+- nkt host script `deploy/nkt/deploy-host.nkt` (+ `pipeline-host.yaml`):
+  deploy on a Docker host from the published ghcr.io images; deploy/README
+  gains a "Verify it works" walkthrough.
 
 ### Fixed
 - Session cookies now set `Secure` and `HttpOnly` on both login and logout

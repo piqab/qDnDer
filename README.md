@@ -89,7 +89,8 @@ Without the file the project settings are used as-is.
 - **Via nkt hub**: [`deploy/nkt/pipeline-compose.yaml`](deploy/nkt/pipeline-compose.yaml)
   — one compose stack (the hub generates the runner token);
   [`deploy/nkt/pipeline-k8s.yaml`](deploy/nkt/pipeline-k8s.yaml) — manifests
-  into a cluster. Steps in [deploy/README.md](deploy/README.md).
+  into a cluster; [`deploy/nkt/deploy-host.nkt`](deploy/nkt/deploy-host.nkt) —
+  a host script from the published images. Steps in [deploy/README.md](deploy/README.md).
 - **nkt hub plugin**: [`plugin/qdnder/`](plugin/qdnder/) — build
   `make plugin-archive`, then hub → About → Plugins → Catalog →
   **Upload your own plugin** (`qdnder-plugin.tar.gz` or `.zip`).

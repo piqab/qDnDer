@@ -16,6 +16,9 @@
 - Конвейеры выкладки через nkt: `deploy/nkt/pipeline-compose.yaml` (один
   compose-стек, токен раннера генерирует хаб, `nkt-example.json` для меню
   «Примеры» хаба) и `deploy/nkt/pipeline-k8s.yaml` (манифесты в кластер).
+- Сценарий на хост `deploy/nkt/deploy-host.nkt` (+ `pipeline-host.yaml`):
+  выкладка на Docker-хост из готовых образов ghcr.io; в deploy/README —
+  раздел «Проверка работоспособности».
 
 ### Исправлено
 - Cookie сессии теперь с `Secure` и `HttpOnly` и при входе, и при выходе
